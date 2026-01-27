@@ -1,0 +1,72 @@
+version: '3.1'
+services:
+  web:
+    image: homesumana/odoo-docker:19
+    depends_on:
+      - db
+    # ports:
+      # - "8069:8069"
+    volumes:
+      - odoo19-web-data:/var/lib/odoo
+      - ./config:/etc/odoo
+      - ../odoo-addons:/mnt/extra-addons
+    environment:
+      - TZ=Asia/Bangkok
+    restart: unless-stopped
+    container_name: odoo19-homesumana-web
+    command:
+      -- --init base_setup
+  db:
+    image: postgres:15
+    # ports:
+      # - "5432:5432"
+    volumes:
+      - odoo19-db-data:/var/lib/postgresql/data
+    environment:
+      - TZ=Asia/Bangkok
+      - POSTGRES_USER=odoo
+      - POSTGRES_PASSWORD=odoo
+      - POSTGRES_DB=postgres
+    restart: unless-stopped
+    container_name: odoo19-homesumana-db
+  adminer:
+    image: adminer
+    depends_on:
+      - db
+    # ports:
+      # - "8080:8080"
+    environment:
+      - TZ=Asia/Bangkok
+    restart: unless-stopped
+    container_name: odoo19-homesumana-adminer
+  vpn:
+    image: ngrok/ngrok
+    depends_on:
+      - web
+    # ports:
+      # - "4040:4040"
+    environment:
+      - TZ=Asia/Bangkok
+      - NGROK_AUTHTOKEN=22JnrlocwQGRIFARXyhHR1tn5jA_bfXJZHuzSZVtdfCE3mq2
+    restart: unless-stopped
+    container_name: odoo19-homesumana-ngrok
+    command:
+      http odoo19-homesumana-web:8069
+  caddy:
+    image: caddy:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      - CADDY_EMAIL=youremail@example.com
+    command: |
+      caddy reverse-proxy --from yourdomain.com --to web:8069
+    container_name: odoo19-homesumana-ssl
+volumes:
+  caddy_data:
+  caddy_config:
+  odoo19-web-data:
+  odoo19-db-data:
